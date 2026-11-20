@@ -73,7 +73,7 @@ Gemini 的浮窗是由 `VoiceInteractionSession` 绘制的（最终落地到 `Fl
 ```bash
 export ANDROID_SDK_ROOT=~/Android/Sdk
 export BUILD_TOOLS=34.0.0
-./build.sh
+bash build.sh
 ```
 
 需要 JDK 11+、Android SDK（platforms + build-tools）、`r8.jar`、`python3`。
