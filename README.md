@@ -91,6 +91,7 @@ KS=/path/to/your.jks KS_PASS=xxx KEY_ALIAS=xxx KEY_PASS=xxx bash build.sh
 ## 免责
 
 个人自用的折腾产物，仅作学习参考。刷机、root、模块注入都有风险，出问题自己担着。在不同机型/系统版本上表现可能完全不一样。
+
 致谢
 Operit ai
 DeepSeek
