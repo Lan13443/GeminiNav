@@ -81,7 +81,7 @@ bash build.sh
 签名默认用 `~/.android/debug.keystore`，可以用环境变量换：
 
 ```bash
-KS=/path/to/your.jks KS_PASS=xxx KEY_ALIAS=xxx KEY_PASS=xxx ./build.sh
+KS=/path/to/your.jks KS_PASS=xxx KEY_ALIAS=xxx KEY_PASS=xxx bash build.sh
 ```
 
 产物在 `build/GeminiNav.apk`。
