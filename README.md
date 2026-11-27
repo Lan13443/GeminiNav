@@ -60,12 +60,17 @@ settings put secure voice_interaction_service \
 需要 `javac`、`d8`、`aapt2`、`apksigner`（Android SDK build-tools）。
 
 ```sh
+# 签名参数走环境变量，脚本里不存密码
+export WA_KS=/path/to/your.jks        # keystore 路径
+export WA_KS_PASS=<store password>
+export WA_KEY_PASS=<key password>     # 可选，不设则与 store 相同
+
 bash build.sh
 adb install -r GeminiNav-v1.1.0.apk
 adb shell "kill -9 \$(pidof com.miui.voiceassist)"   # 重启小爱进程即可，不必重启手机
 ```
 
-签名用的 keystore 需自行准备，`build.sh` 里写死的路径是作者本机的。
+嫌每次 export 麻烦就存进一个本地文件（例如 `sign.env`，已被 `.gitignore` 忽略），构建前 `source` 一下。
 
 ## 安装后
 
