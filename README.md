@@ -4,6 +4,8 @@
 
 模块作用域：`com.miui.voiceassist`、`com.miui.home`
 
+当前版本：**v1.1.0**（versionCode 2）
+
 ## 原理
 
 ```
@@ -59,9 +61,11 @@ settings put secure voice_interaction_service \
 
 ```sh
 bash build.sh
-adb install -r GeminiNav_v1.apk
+adb install -r GeminiNav-v1.1.0.apk
 adb shell "kill -9 \$(pidof com.miui.voiceassist)"   # 重启小爱进程即可，不必重启手机
 ```
+
+签名用的 keystore 需自行准备，`build.sh` 里写死的路径是作者本机的。
 
 ## 安装后
 
@@ -83,3 +87,18 @@ GeminiNav: assist key injected
 - 需要 LSPosed（或兼容的 Xposed 框架）
 - 只在 HyperOS / MIUI 上验证过，AOSP 上导航栏行为不同，可能不适用
 - 需要系统里装有 Google App 并把默认助理设为 Gemini
+
+## 更新记录
+
+### v1.1.0
+
+- 新增 `Settings.Secure.putString` 拦截。小爱把 `voice_interaction_service` / `assistant`
+  写回自己时，当场改写成 Google 的 Gsa 组件，从源头堵住「长按又调不出 Gemini」。
+- 按键注入路径保持 `KEYCODE_ASSIST` 不变。上一版试过的显式 Intent 方案已废弃，
+  原因见上文「为什么不用显式 Intent 直接拉起」。
+- README 重写：补全原理链路、设置被抢的成因、手动修复命令、构建步骤与日志验证。
+- 版本号从 `1.0.0` → `1.1.0`，构建产物改为 `GeminiNav-v1.1.0.apk`。
+
+### v1.0.0
+
+- 首版。拦截小爱 `VoiceService.onStartCommand`，注入 `KEYCODE_ASSIST` 唤起 Gemini。
