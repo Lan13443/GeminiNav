@@ -25,8 +25,19 @@ print('dex added')
 EOF
 
 echo '== sign =='
+# 签名参数从环境变量读，不要把 keystore 密码写进脚本
+if [ -z "${WA_KS:-}" ] || [ -z "${WA_KS_PASS:-}" ]; then
+  echo '!! 缺少签名参数，先设置环境变量：' >&2
+  echo '   export WA_KS=/path/to/keystore.jks' >&2
+  echo '   export WA_KS_PASS=<store password>' >&2
+  echo '   export WA_KEY_PASS=<key password>   # 不设则与 store 相同' >&2
+  exit 1
+fi
+KS=${WA_KS:-/sdcard/pj/wa.jks}
+KP=${WA_KEY_PASS:-$WA_KS_PASS}
+
 /root/android-sdk/android-14/apksigner sign \
-  --ks /sdcard/pj/wa.jks --ks-pass pass:wa2000wa --key-pass pass:wa2000wa \
+  --ks "$KS" --ks-pass "pass:$WA_KS_PASS" --key-pass "pass:$KP" \
   --out /sdcard/pj/GeminiNav/GeminiNav-v1.1.0.apk /sdcard/pj/GeminiNav/linked.apk || exit 1
 
 echo '== verify =='
