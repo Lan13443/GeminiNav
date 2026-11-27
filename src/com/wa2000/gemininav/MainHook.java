@@ -2,10 +2,9 @@ package com.wa2000.gemininav;
 
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-
-import java.lang.reflect.Method;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -19,6 +18,13 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final String HOME_PKG = "com.miui.home";
     private static final String FROM_KEY = "voice_assist_start_from_key";
     private static final String NAV_LONG_PRESS = "long_press_fullscreen_gesture_line";
+
+    /** 系统助理设置的两个键，小爱会偷偷把自己写回去。 */
+    private static final String KEY_VIA = "voice_interaction_service";
+    private static final String KEY_ASSISTANT = "assistant";
+    private static final String GSA_VIA =
+            "com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService";
+    private static final String XIAOAI = "com.miui.voiceassist";
 
     private static final Object LOCK = new Object();
     private static long lastInject = 0L;
@@ -53,17 +59,18 @@ public class MainHook implements IXposedHookLoadPackage {
         return NAV_LONG_PRESS.equals(b.getString(FROM_KEY));
     }
 
+    /**
+     * 走系统助理按键。系统会读 secure/voice_interaction_service，
+     * 指向 GsaVoiceInteractionService 时直接进 Gemini 对话界面。
+     */
     private static void injectAssist() {
-        if (!acquire()) {
-            return;
-        }
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     android.app.Instrumentation inst = new android.app.Instrumentation();
                     inst.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_ASSIST);
-                    XposedBridge.log(TAG + ": injected via Instrumentation");
+                    XposedBridge.log(TAG + ": assist key injected");
                     return;
                 } catch (Throwable t2) {
                     XposedBridge.log(TAG + ": inst err " + t2);
@@ -78,6 +85,50 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         }, "GeminiNav-inject");
         t.start();
+    }
+
+    private static void trigger(Context ctx) {
+        if (!acquire()) {
+            return;
+        }
+        injectAssist();
+    }
+
+    /**
+     * 防抢：小爱把 voice_interaction_service / assistant 写回自己时，当场改成 Google。
+     * 这是"长按又调不出 Gemini"的根因，hook 住就一劳永逸。
+     */
+    private static void hookSettingsGuard() {
+        try {
+            XposedBridge.hookAllMethods(android.provider.Settings.Secure.class, "putString",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            try {
+                                if (param.args == null || param.args.length < 3) {
+                                    return;
+                                }
+                                Object name = param.args[1];
+                                Object value = param.args[2];
+                                if (!(name instanceof String) || !(value instanceof String)) {
+                                    return;
+                                }
+                                String k = (String) name;
+                                String v = (String) value;
+                                if ((KEY_VIA.equals(k) || KEY_ASSISTANT.equals(k))
+                                        && v.contains(XIAOAI)) {
+                                    param.args[2] = GSA_VIA;
+                                    XposedBridge.log(TAG + ": blocked rewrite of " + k + " -> Google");
+                                }
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": guard err " + t);
+                            }
+                        }
+                    });
+            XposedBridge.log(TAG + ": settings guard installed");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": guard hook err " + t);
+        }
     }
 
     private static final XC_MethodHook HOME_HOOK = new XC_MethodHook() {
@@ -97,7 +148,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
                 param.setResult(null);
                 XposedBridge.log(TAG + ": home intercepted -> Gemini");
-                injectAssist();
+                trigger(null);
             } catch (Throwable t) {
                 XposedBridge.log(TAG + ": home hook err " + t);
             }
@@ -147,13 +198,14 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         param.setResult(Service.START_NOT_STICKY);
                         XposedBridge.log(TAG + ": nav long press intercepted -> Gemini");
-                        injectAssist();
+                        trigger((Service) param.thisObject);
                     } catch (Throwable t) {
                         XposedBridge.log(TAG + ": hook err " + t);
                     }
                 }
             });
             XposedBridge.log(TAG + ": xiaoai hook installed");
+            hookSettingsGuard();
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": init err " + t);
         }
