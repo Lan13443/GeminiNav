@@ -33,7 +33,7 @@ if [ -z "${WA_KS:-}" ] || [ -z "${WA_KS_PASS:-}" ]; then
   echo '   export WA_KEY_PASS=<key password>   # 不设则与 store 相同' >&2
   exit 1
 fi
-KS=${WA_KS:-/sdcard/pj/wa.jks}
+KS=$WA_KS
 KP=${WA_KEY_PASS:-$WA_KS_PASS}
 
 /root/android-sdk/android-14/apksigner sign \
